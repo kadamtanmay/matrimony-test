@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\matrimony_subscription.props" />
+</Project>

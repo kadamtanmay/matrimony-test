@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "aXYQCEOYwIF06Q3vWUa4qjrR+zTf7OHQoY1424dmPuw=",
+  "Source": "matrimony_subscription",
+  "BasePath": "_content/matrimony_subscription",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}

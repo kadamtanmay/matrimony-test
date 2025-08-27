@@ -1,0 +1,23 @@
+Database Name : "Matrimony-Portal"
+Table Name: Users
+Columns:
+{
+    "id": {type: int, primary key, auto_increment, size: undefined},
+    "name": {type: varchar, size: 255, nullable: false},
+    "email": {type: varchar, size: 255, unique: true, nullable: false},
+    "password": {type: varchar, size: 255, nullable: false},
+    "gender": {type: enum, values: ['Male', 'Female', 'Other'], nullable: false},
+    "date_of_birth": {type: date, nullable: false},
+    "phone": {type: varchar, size: 15, nullable: true},
+    "address": {type: text, nullable: true},
+    "profile_picture": {type: varchar, size: 255, nullable: true},
+    "marital_status": {type: enum, values: ['Single', 'Married', 'Divorced', 'Widowed'], default: 'Single', nullable: false},
+    "religion": {type: varchar, size: 50, nullable: true},
+    "caste": {type: varchar, size: 50, nullable: true},
+    "mother_tongue": {type: varchar, size: 50, nullable: true},
+    "education": {type: varchar, size: 255, nullable: true},
+    "profession": {type: varchar, size: 255, nullable: true},
+    "annual_income": {type: varchar, size: 50, nullable: true},
+    "created_at": {type: timestamp, default: CURRENT_TIMESTAMP, nullable: false},
+    "updated_at": {type: timestamp, default: CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP, nullable: false}
+}
