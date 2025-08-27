@@ -16,9 +16,62 @@ const Dashboard = () => {
 
   // Re-add this state for profile images
   const [profileImages, setProfileImages] = useState({});
-
   // Filtered matches list
   const [filteredMatches, setFilteredMatches] = useState([]);
+  // Add pending requests state
+  const [pendingRequests, setPendingRequests] = useState([]);
+
+  // Fetch pending requests
+  useEffect(() => {
+    const fetchPendingRequests = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`http://localhost:8080/pending-requests/pending/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setPendingRequests(response.data);
+        console.log('Pending requests fetched:', response.data);
+      } catch (error) {
+        console.error('Failed to fetch pending requests:', error);
+      }
+    };
+    
+    if (user) {
+      fetchPendingRequests();
+    }
+  }, [user]);
+
+  // Handle accept request
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8080/pending-requests/accept/${requestId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Refresh pending requests
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+      alert('Request accepted successfully!');
+    } catch (error) {
+      console.error('Failed to accept request:', error);
+      alert('Failed to accept request');
+    }
+  };
+
+  // Handle reject request
+  const handleRejectRequest = async (requestId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8080/pending-requests/reject/${requestId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Refresh pending requests
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+      alert('Request rejected successfully!');
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      alert('Failed to reject request');
+    }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -120,6 +173,46 @@ const Dashboard = () => {
               </Link>
             </div>
           ))}
+        </div>
+
+        {/* ✅ PENDING REQUESTS SECTION - MOVED INSIDE RETURN */}
+        <div className="row mt-4">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header">
+                <h5>Pending Requests ({pendingRequests.length})</h5>
+              </div>
+              <div className="card-body">
+                {pendingRequests.length > 0 ? (
+                  pendingRequests.map((request, index) => (
+                    <div key={index} className="d-flex justify-content-between align-items-center border-bottom py-2">
+                      <div>
+                        <strong>{request.sender.firstName} {request.sender.lastName}</strong>
+                        <p className="text-muted mb-0">Sent you a connection request</p>
+                        <small className="text-muted">{new Date(request.timestamp).toLocaleDateString()}</small>
+                      </div>
+                      <div>
+                        <button 
+                          className="btn btn-success btn-sm me-2"
+                          onClick={() => handleAcceptRequest(request.id)}
+                        >
+                          Accept
+                        </button>
+                        <button 
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleRejectRequest(request.id)}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted">No pending requests</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-5">

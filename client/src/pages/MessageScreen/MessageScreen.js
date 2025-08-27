@@ -1,63 +1,84 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setUser } from "../../redux/actions";
 import axios from "axios";
 import Layout from "../../components/Layout/Layout";
 
 const MessageScreen = () => {
   const { id } = useParams();
   const user = useSelector((state) => state.user);
+  const dispatch = useDispatch();
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [person, setPerson] = useState(null);
   const [profileImage, setProfileImage] = useState("");
-  const messagesEndRef = useRef(null); // Ref for auto-scrolling
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  // Fetch conversation and user details on component mount
+  const token = localStorage.getItem('token');
+
+  // All hooks at top-level
+  useEffect(() => {
+    const restoreUserFromToken = async () => {
+      if (!user && token) {
+        try {
+          setIsLoading(true);
+          const response = await axios.get('http://localhost:8080/user/me', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          dispatch(setUser(response.data));
+          setIsLoading(false);
+        } catch (error) {
+          localStorage.removeItem('token');
+          setIsLoading(false);
+        }
+      }
+    };
+    restoreUserFromToken();
+  }, [user, token, dispatch]);
+
   useEffect(() => {
     if (user && id) {
       const fetchConversation = async () => {
         try {
+          const headers = { Authorization: `Bearer ${token}` };
+
           const conversationResponse = await axios.get(
-            `http://localhost:8080/messages/conversation?user1Id=${user.id}&user2Id=${id}`
+            `http://localhost:8080/messages/conversation?user1Id=${user.id}&user2Id=${id}`,
+            { headers }
           );
 
-          // Sort messages by timestamp (oldest first)
-          const sortedMessages = conversationResponse.data.sort((a, b) =>
-            new Date(a.timestamp) - new Date(b.timestamp)
-          );
-
+          const sortedMessages = conversationResponse.data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
           setChatMessages(sortedMessages);
 
-          const personResponse = await axios.get(
-            `http://localhost:8080/user/${id}`
-          );
+          const personResponse = await axios.get(`http://localhost:8080/user/${id}`, { headers });
           setPerson(personResponse.data);
 
-          // Fetch profile picture for the person
-          const profileResponse = await axios.get(
-            "http://localhost:8080/profile-picture",
-            { params: { userId: id } }
-          );
-          setProfileImage(profileResponse.data || "https://media.istockphoto.com/id/1681388313/vector/cute-baby-panda-cartoon-on-white-background.jpg?s=612x612&w=0&k=20&c=qFrzn8TqONiSfwevvkYhys1z80NAmDfw3o-HRdwX0d8="); // Fallback image
+          const profileResponse = await axios.get("http://localhost:8080/profile-picture", {
+            params: { userId: id },
+            headers
+          });
+          setProfileImage(profileResponse.data || "https://media.istockphoto.com/id/1681388313/vector/cute-baby-panda-cartoon-on-white-background.jpg?s=612x612&w=0&k=20&c=qFrzn8TqONiSfwevvkYhys1z80NAmDfw3o-HRdwX0d8=");
         } catch (error) {
-          console.error("Error fetching conversation or person:", error);
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            // handle token expiration or unauthorized
+          }
         }
       };
-
       fetchConversation();
     }
-  }, [id, user]);
+  }, [id, user, token]);
 
-  // Auto-scroll to the latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Handle sending a message
+  // Handlers for sending messages
   const sendMessage = async () => {
-    if (newMessage.trim()) {
+    if (newMessage.trim() && user) {
       try {
+        const headers = { Authorization: `Bearer ${token}` };
         const response = await axios.post(
           "http://localhost:8080/messages/send",
           null,
@@ -67,25 +88,33 @@ const MessageScreen = () => {
               receiverId: id,
               content: newMessage,
             },
+            headers
           }
         );
-
-        // If message sent successfully, add it to the chat and sort again
         if (response.data) {
           setChatMessages((prevMessages) =>
-            [...prevMessages, response.data].sort((a, b) =>
-              new Date(a.timestamp) - new Date(b.timestamp)
-            )
+            [...prevMessages, response.data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
           );
-          setNewMessage(""); // Clear input field
+          setNewMessage("");
         }
       } catch (error) {
-        console.error("Error sending message:", error);
+        if (error.response?.status === 403) {
+          alert('You are not connected to this user. Please send a connection request first.');
+        }
       }
-    } else {
-      console.log("Message content is empty");
     }
   };
+
+  if (isLoading || (!user && token)) {
+    return (
+      <Layout>
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+          <div className="spinner-border" role="status" />
+          <p className="ms-3">Restoring user session...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -100,29 +129,24 @@ const MessageScreen = () => {
           <h3>{person?.firstName || "User"}</h3>
         </div>
 
-        {/* Chat Messages Container with fixed height and scroll */}
         <div
           className="border rounded p-3 mb-3"
-          style={{
-            height: "400px", // Fixed height for the messages container
-            overflowY: "auto", // Allows scrolling for the messages inside
-            scrollBehavior: "smooth", // Smooth scroll effect for new messages
-          }}
+          style={{ height: "400px", overflowY: "auto", scrollBehavior: "smooth" }}
         >
           {chatMessages.map((message, index) => (
             <div
               key={index}
-              className={`message ${message.sender.id === user.id ? "sent" : "received"}`}
+              className={`message ${message.sender?.id === user?.id ? "sent" : "received"}`}
               style={{
                 display: "flex",
-                flexDirection: message.sender.id === user.id ? "row-reverse" : "row", // Align based on sender
+                flexDirection: message.sender?.id === user?.id ? "row-reverse" : "row",
                 padding: "10px",
                 marginBottom: "10px",
               }}
             >
               <div
                 style={{
-                  backgroundColor: message.sender.id === user.id ? "#d1f7c4" : "#e0e0e0", // Sender's message green, Receiver's message gray
+                  backgroundColor: message.sender?.id === user?.id ? "#d1f7c4" : "#e0e0e0",
                   borderRadius: "10px",
                   padding: "10px",
                   maxWidth: "70%",
@@ -135,20 +159,20 @@ const MessageScreen = () => {
               </div>
             </div>
           ))}
-          {/* Auto-scroll target */}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Box */}
         <div className="input-group">
           <input
             type="text"
             className="form-control"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
             placeholder="Type your message..."
+            disabled={!user}
           />
-          <button className="btn btn-primary" onClick={sendMessage}>
+          <button className="btn btn-primary" onClick={sendMessage} disabled={!user}>
             Send
           </button>
         </div>

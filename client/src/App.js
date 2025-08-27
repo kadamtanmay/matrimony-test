@@ -40,7 +40,7 @@ const App = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/message" element={<Message />} />
         <Route path="/messages/:id" element={<MessageScreen />} />
-        <Route path="/view-profile/:name" element={<ViewProfile />} />
+        <Route path="/view-profile/:name" element={<Profile />} />
         
         <Route path="/SelectPreferences" element={<SelectPreferences />} />
 

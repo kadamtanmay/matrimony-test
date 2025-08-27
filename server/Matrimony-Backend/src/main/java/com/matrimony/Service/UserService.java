@@ -77,6 +77,15 @@ public class UserService {
         userDao.save(existingUser);
         return ResponseEntity.ok(existingUser);
     }
+    
+    public User getUserByEmail(String email) {
+        Optional<User> userOpt = userDao.findByEmail(email);
+        if (userOpt.isPresent()) {
+            return userOpt.get();
+        } else {
+            throw new RuntimeException("User not found with email: " + email);
+        }
+    }
 
     // ✅ Get user by ID
     public User getUserById(Long id) {

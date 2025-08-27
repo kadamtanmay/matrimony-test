@@ -184,11 +184,16 @@ const Matches = () => {
                     <p className="text-muted">Marital Status: {match.maritalStatus}</p>
                     <p className="text-muted">Date of Birth: {match.dateOfBirth}</p>
                     <button
-                      className="btn btn-primary"
-                      onClick={() => navigate(`/view-profile/${match.firstName}`, { state: { match } })}
-                    >
-                      View Profile
-                    </button>
+  className="btn btn-primary"
+  onClick={() => navigate(`/view-profile/${match.firstName}`, { 
+    state: { 
+      match: match,
+      userId: match.id  // Add userId explicitly for easier access
+    } 
+  })}
+>
+  View Profile
+</button>
                   </div>
                 </div>
               </div>

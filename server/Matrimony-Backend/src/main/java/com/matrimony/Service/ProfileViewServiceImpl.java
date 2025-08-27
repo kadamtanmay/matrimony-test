@@ -1,6 +1,6 @@
 package com.matrimony.Service;
 
-import com.matrimony.Dao.ProfileViewDao;
+import com.matrimony.Dao.ProfileViewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -8,10 +8,10 @@ import org.springframework.stereotype.Service;
 public class ProfileViewServiceImpl implements ProfileViewService {
 
     @Autowired
-    private ProfileViewDao profileViewDao;
+    private ProfileViewRepository profileViewDao;
 
     @Override
-    public int countProfileViews(Long userId) {
-        return profileViewDao.countViewsByUserId(userId);
+    public long countProfileViews(Long userId) {
+        return profileViewDao.countByViewedUserId(userId);
     }
 }
