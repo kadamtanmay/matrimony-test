@@ -4,6 +4,8 @@ import com.matrimony.Entity.User;
 import com.matrimony.Service.UserService;
 import com.matrimony.Service.MatchService;
 import com.matrimony.Service.MessageService;
+import com.matrimony.Service.PendingRequestService;
+import com.matrimony.Service.ProfileViewService;
 import com.matrimony.Security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,9 @@ public class UserController {
 
     @Autowired
     private MessageService messageService;
+    
+    @Autowired private PendingRequestService prs;
+    @Autowired private ProfileViewService pvs;  // implement similarly
 
     // ✅ Sign Up (Registers a new user with password hashing)
     @PostMapping("/signup")
@@ -93,11 +98,13 @@ public class UserController {
 
             // Unread messages
             int unread = messageService.getUnreadMessageCount(userId);
-            stats.put("newMessages", unread);
+          
 
-            // Placeholder values (implement later)
-            stats.put("pendingRequests", 0);
-            stats.put("profileViews", 0);
+            // …
+            stats.put("newMessages", messageService.getUnreadMessageCount(userId));
+            stats.put("pendingRequests", prs.countPendingRequests(userId));
+            stats.put("profileViews", pvs.countProfileViews(userId));
+
 
             return ResponseEntity.ok(stats);
         } catch (Exception e) {

@@ -7,11 +7,24 @@ import org.springframework.data.repository.query.Param;
 
 public interface PendingRequestDao extends JpaRepository<PendingRequest, Long> {
 
-    @Query("SELECT COUNT(r) FROM PendingRequest r WHERE r.receiver.id = :userId AND r.status = 'PENDING'")
-    int countPendingByUserId(@Param("userId") Long userId);
+  // Count pending requests received by user
+  @Query("SELECT COUNT(r) FROM PendingRequest r WHERE r.receiver.id = :userId AND r.status = 'PENDING'")
+  int countPendingByUserId(@Param("userId") Long userId);
 
-    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM PendingRequest r " +
-           "WHERE ((r.sender.id = :userId1 AND r.receiver.id = :userId2) OR (r.sender.id = :userId2 AND r.receiver.id = :userId1)) " +
-           "AND r.status = 'ACCEPTED'")
-    boolean existsAcceptedConnection(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+  // Does an accepted connection exist between two users?
+  @Query("""
+    SELECT CASE WHEN COUNT(r)>0 THEN true ELSE false END
+      FROM PendingRequest r
+     WHERE ((r.sender.id=:u1 AND r.receiver.id=:u2)
+         OR (r.sender.id=:u2 AND r.receiver.id=:u1))
+       AND r.status='ACCEPTED'
+  """)
+  boolean existsAcceptedConnection(@Param("u1") Long userId1, @Param("u2") Long userId2);
+
+  // Has sender already sent a request to receiver?
+  @Query("SELECT CASE WHEN COUNT(r)>0 THEN true ELSE false END "
+       + "FROM PendingRequest r "
+       + "WHERE r.sender.id=:sender AND r.receiver.id=:receiver")
+  boolean existsBySenderAndReceiver(@Param("sender") Long senderId,
+                                    @Param("receiver") Long receiverId);
 }

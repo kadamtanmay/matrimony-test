@@ -1,22 +1,48 @@
 package com.matrimony.Service;
 
 import com.matrimony.Dao.PendingRequestDao;
+import com.matrimony.Entity.PendingRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class PendingRequestServiceImpl implements PendingRequestService {
 
-    @Autowired
-    private PendingRequestDao dao;
+  @Autowired private PendingRequestDao dao;
 
-    @Override
-    public int countPendingRequests(Long userId) {
-        return dao.countPendingByUserId(userId);
-    }
+  @Override
+  public void saveRequest(PendingRequest request) {
+    dao.save(request);
+  }
 
-    @Override
-    public boolean isConnected(Long userId1, Long userId2) {
-        return dao.existsAcceptedConnection(userId1, userId2);
-    }
+  @Override
+  public List<PendingRequest> getPendingRequestsByUserId(Long userId) {
+    return dao.findAll() // filter in code or add query for status=PENDING
+              .stream().filter(r -> r.getReceiver().getId().equals(userId)
+                                  && r.getStatus().equals("PENDING"))
+              .toList();
+  }
+
+  @Override
+  public void updateRequestStatus(Long requestId, String status) {
+    PendingRequest r = dao.findById(requestId).orElseThrow();
+    r.setStatus(status);
+    dao.save(r);
+  }
+
+  @Override
+  public int countPendingRequests(Long userId) {
+    return dao.countPendingByUserId(userId);
+  }
+
+  @Override
+  public boolean isConnected(Long u1, Long u2) {
+    return dao.existsAcceptedConnection(u1, u2);
+  }
+
+  @Override
+  public boolean hasSentRequest(Long senderId, Long receiverId) {
+    return dao.existsBySenderAndReceiver(senderId, receiverId);
+  }
 }

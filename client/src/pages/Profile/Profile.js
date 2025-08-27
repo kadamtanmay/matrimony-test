@@ -12,26 +12,47 @@ const Profile = () => {
   const [formData, setFormData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
 
+  // Pending request and connection states
+  const [isConnected, setIsConnected] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
+
   useEffect(() => {
     if (user && user.id) {
       setFormData({ ...user });
     }
   }, [user]);
 
+  // Check request/connection status whenever formData changes (profile user)
   useEffect(() => {
-    const fetchProfilePicture = async () => {
+    const checkStatus = async () => {
+      if (!user || !formData.id || user.id === formData.id) {
+        setIsConnected(false);
+        setRequestSent(false);
+        return;
+      }
       try {
-        const response = await axios.get(`http://localhost:8080/profile-picture`, { params: { userId: user.id } });
-        if (response.data) {
-          setImageUrl(response.data);
-        }
+        const token = localStorage.getItem('token');
+
+        const connectedResp = await axios.get('http://localhost:8080/pending-requests/is-connected', {
+          params: { userId1: user.id, userId2: formData.id },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setIsConnected(connectedResp.data.connected);
+
+        const sentResp = await axios.get('http://localhost:8080/pending-requests/has-sent', {
+          params: { senderId: user.id, receiverId: formData.id },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setRequestSent(sentResp.data.hasSent);
       } catch (error) {
-        console.error("Failed to fetch profile picture");
+        setIsConnected(false);
+        setRequestSent(false);
       }
     };
-    fetchProfilePicture();
-  }, [user.id]);
+    checkStatus();
+  }, [user, formData]);
 
+  // Handlers
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -46,11 +67,11 @@ const Profile = () => {
 
   const handleUpload = async () => {
     if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("userId", user.id);
+    const form = new FormData();
+    form.append("file", file);
+    form.append("userId", user.id);
     try {
-      await axios.post("http://localhost:8080/profile-picture/upload", formData, {
+      await axios.post("http://localhost:8080/profile-picture/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setImageUrl(URL.createObjectURL(file));
@@ -62,6 +83,27 @@ const Profile = () => {
   const handleSaveClick = () => {
     dispatch(updateUser(formData));
     setIsEditing(false);
+  };
+
+  // Send connection request handler
+  const handleSendRequest = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:8080/pending-requests/send', null, {
+        params: { senderId: user.id, receiverId: formData.id },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRequestSent(true);
+      alert('Request sent successfully');
+    } catch {
+      alert('Failed to send request');
+    }
+  };
+
+  // Optional: implement navigation to messages page
+  const handleSendMessage = () => {
+    // e.g., navigate(`/messages/${formData.id}`)
+    alert('Navigate to messaging area for user');
   };
 
   return (
@@ -94,6 +136,29 @@ const Profile = () => {
         </div>
       </div>
 
+      {/* Action Buttons with connection logic */}
+      <div className="container d-flex justify-content-center mt-3 gap-2">
+        {user.id !== formData.id && (
+          <>
+            {isConnected ? (
+              <button className="btn btn-primary" onClick={handleSendMessage}>
+                Send Message
+              </button>
+            ) : requestSent ? (
+              <button className="btn btn-secondary" disabled>
+                Request Sent
+              </button>
+            ) : (
+              <button className="btn btn-warning" onClick={handleSendRequest}>
+                Send Request
+              </button>
+            )}
+          </>
+        )}
+        <button className="btn btn-danger">Report Profile</button>
+      </div>
+
+      {/* Edit Modal */}
       {isEditing && (
         <div className="modal fade show d-flex justify-content-center align-items-center vh-100" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="modal-dialog" style={{ maxHeight: "90vh", overflowY: "auto" }}>
